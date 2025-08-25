@@ -103,7 +103,6 @@ ai-debt-finance-advisor/
 │   └── CONTRIBUTING.md # Contribution guidelines
 
 └── tests/               # Unit tests
-
     ├── test_optimization.py
     
     ├── test_scenarios.py
