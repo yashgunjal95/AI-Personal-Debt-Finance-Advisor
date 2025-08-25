@@ -51,34 +51,63 @@ The application will open in your browser at http://localhost:8501
 
 ai-debt-finance-advisor/
 ├── app.py                 # Main Streamlit application
+
 ├── requirements.txt       # Python dependencies
+
 ├── .env.example          # Environment variables template
+
 ├── .gitignore           # Git ignore rules
+
 ├── README.md            # This file
+
 ├── LICENSE              # MIT License
+
 ├── core/                # Core application modules
+
 │   ├── __init__.py
+
 │   ├── schemas.py       # Data models (Debt, UserProfile, etc.)
+
 │   ├── optimization.py  # Debt repayment algorithms
+
 │   ├── scenarios.py     # What-if analysis functions
+
 │   ├── education.py     # Educational content and RAG
+
 │   ├── docsum.py        # Document analysis
+
 │   ├── prompts.py       # AI prompts and templates
+
 │   ├── utils.py         # Utility functions
+
 │   ├── memory.py        # Chat history management
+
 │   ├── plan_utils.py    # Plan visualization utilities
+
 │   ├── chat_tools.py    # Slash command processors
+
 │   └── recommendations.py # Personalized recommendations
+
 ├── data/                # Knowledge base and sample data
+
 │   ├── financial_kb/    # Educational content
+
 │   └── sample_data/     # Example datasets
+
 ├── docs/                # Additional documentation
+
 │   ├── API.md          # API documentation
+
 │   ├── DEPLOYMENT.md   # Deployment guide
+
 │   └── CONTRIBUTING.md # Contribution guidelines
+
 └── tests/               # Unit tests
+
     ├── test_optimization.py
+    
     ├── test_scenarios.py
+    
     └── test_utils.py
 
 💡 Usage Examples
