@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Personal Debt Finance Advisor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root[data-theme="dark"] {
+  --primary-dark:#0a0a0f;--secondary-dark:#1a1a2e;--accent-blue:#16213e;
+  --glass-bg:rgba(255,255,255,.03);--glass-border:rgba(255,255,255,.1);
+  --text-primary:#fff;--text-secondary:rgba(255,255,255,.8);--text-muted:rgba(255,255,255,.6);
+  --neon-blue:#00d4ff;--neon-purple:#7c3aed;--success-green:#10b981;--warning-orange:#f59e0b;--error-red:#ef4444;
+}
+:root[data-theme="light"] {
+  --primary-dark:#ffffff;--secondary-dark:#f5f6fa;--accent-blue:#eef2ff;
+  --glass-bg:rgba(0,0,0,.03);--glass-border:rgba(0,0,0,.1);
+  --text-primary:#1a1a2e;--text-secondary:#444;--text-muted:#777;
+  --neon-blue:#2563eb;--neon-purple:#7c3aed;--success-green:#16a34a;--warning-orange:#d97706;--error-red:#dc2626;
+}
+:root { /* default (dark) so it still looks good if data-theme missing */
+  --primary-dark:#0a0a0f;--secondary-dark:#1a1a2e;--accent-blue:#16213e;
+  --glass-bg:rgba(255,255,255,.03);--glass-border:rgba(255,255,255,.1);
+  --text-primary:#fff;--text-secondary:rgba(255,255,255,.8);--text-muted:rgba(255,255,255,.6);
+  --neon-blue:#00d4ff;--neon-purple:#7c3aed;--success-green:#10b981;--warning-orange:#f59e0b;--error-red:#ef4444;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  background:linear-gradient(135deg,var(--primary-dark) 0%,var(--secondary-dark) 50%,var(--accent-blue) 100%);
+  min-height:100vh;color:var(--text-primary);overflow-x:hidden;position:relative;
+}
+/* animated bg */
+body::before{
+  content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background:
+    radial-gradient(circle at 20% 80%, rgba(0,212,255,.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(124,58,237,.15) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(16,185,129,.1) 0%, transparent 50%);
+  animation:backgroundFloat 20s ease-in-out infinite;z-index:-2;
+}
+@keyframes backgroundFloat{0%,100%{transform:translateY(0) rotate(0)}33%{transform:translateY(-30px) rotate(120deg)}66%{transform:translateY(15px) rotate(240deg)}}
+.glass{
+  background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--glass-border);border-radius:20px;
+  box-shadow:0 8px 32px rgba(0,0,0,.37), inset 0 1px 0 rgba(255,255,255,.1);
+  position:relative;overflow:hidden;
+}
+.glass::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.05),transparent);transition:left .8s ease}
+.glass:hover::before{left:100%}
+.header{padding:2rem 0;text-align:center;position:relative;z-index:10}
+.header h1{
+  font-size:clamp(2.5rem,5vw,4rem);font-weight:700;
+  background:linear-gradient(135deg,var(--neon-blue) 0%, var(--neon-purple) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:.5rem;text-shadow:0 0 30px rgba(0,212,255,.3);animation:glow 3s ease-in-out infinite alternate;
+}
+@keyframes glow{from{filter:drop-shadow(0 0 20px rgba(0,212,255,.3))}to{filter:drop-shadow(0 0 30px rgba(124,58,237,.5))}}
+.header p{font-size:1.25rem;color:var(--text-secondary);font-weight:300}
+.nav-container{position:sticky;top:0;z-index:100;padding:1rem 0;backdrop-filter:blur(20px);border-bottom:1px solid var(--glass-border)}
+.nav{display:flex;justify-content:center;flex-wrap:wrap;gap:.5rem;max-width:1200px;margin:0 auto;padding:0 2rem}
+.nav-button{
+  padding:.8rem 1.5rem;border:none;border-radius:15px;background:var(--glass-bg);color:var(--text-primary);
+  cursor:pointer;transition:all .3s ease;backdrop-filter:blur(10px);border:1px solid var(--glass-border);
+  font-weight:500;font-size:.95rem;position:relative;overflow:hidden
+}
+.nav-button:hover{background:rgba(0,212,255,.1);transform:translateY(-2px);box-shadow:0 10px 25px rgba(0,212,255,.2);border-color:var(--neon-blue)}
+.nav-button.active{background:linear-gradient(135deg,var(--neon-blue) 0%, var(--neon-purple) 100%);box-shadow:0 8px 25px rgba(0,212,255,.3);color:#fff}
+.container{max-width:1400px;margin:0 auto;padding:2rem}
+.page{display:none;animation:pageSlideIn .5s ease-out}
+.page.active{display:block}
+@keyframes pageSlideIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.form-group{margin-bottom:1.5rem}
+.form-group label{display:block;margin-bottom:.5rem;color:var(--text-secondary);font-weight:500;font-size:.9rem}
+.form-input,.form-select{
+  width:100%;padding:1rem;border:1px solid var(--glass-border);border-radius:12px;background:var(--glass-bg);
+  color:var(--text-primary);font-size:1rem;backdrop-filter:blur(10px);transition:all .3s ease
+}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--neon-blue);box-shadow:0 0 20px rgba(0,212,255,.2);background:rgba(0,212,255,.05)}
+.form-input::placeholder{color:var(--text-muted)}
+.btn{padding:1rem 2rem;border:none;border-radius:15px;font-weight:600;font-size:1rem;cursor:pointer;transition:all .3s ease;position:relative;overflow:hidden}
+.btn-primary{background:linear-gradient(135deg,var(--neon-blue) 0%, var(--neon-purple) 100%);color:#fff;box-shadow:0 8px 25px rgba(0,212,255,.3)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,212,255,.4)}
+.btn-secondary{background:var(--glass-bg);color:var(--text-primary);border:1px solid var(--glass-border);backdrop-filter:blur(10px)}
+.btn-secondary:hover{background:rgba(255,255,255,.1);transform:translateY(-2px)}
+.btn-danger{background:linear-gradient(135deg,var(--error-red) 0%, #dc2626 100%);color:#fff;box-shadow:0 8px 25px rgba(239,68,68,.3)}
+.btn-danger:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(239,68,68,.4)}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none!important}
+.btn-loading{position:relative;color:transparent}
+.btn-loading::after{
+  content:'';position:absolute;width:20px;height:20px;top:50%;left:50%;margin-left:-10px;margin-top:-10px;
+  border:2px solid #fff;border-radius:50%;border-top-color:transparent;animation:spin 1s ease-in-out infinite
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.grid{display:grid;gap:1.5rem}.grid-2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}.grid-3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}.grid-4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.card{padding:2rem;margin-bottom:2rem}
+.card-header{margin-bottom:2rem}
+.card-title{font-size:1.5rem;font-weight:600;margin-bottom:.5rem;color:var(--text-primary)}
+.card-description{color:var(--text-secondary);line-height:1.6}
+.debt-item{padding:1.5rem;border:1px solid var(--glass-border);border-radius:15px;background:var(--glass-bg);backdrop-filter:blur(10px);margin-bottom:1rem;position:relative}
+.debt-item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.debt-item-title{font-weight:600;color:var(--neon-blue);font-size:1.1rem}
+.debt-remove-btn{padding:.5rem;background:var(--error-red);border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:.8rem;transition:all .3s ease}
+.debt-remove-btn:hover{background:#dc2626;transform:scale(1.05)}
+.chat-container{height:500px;display:flex;flex-direction:column;gap:1rem}
+.chat-messages{flex:1;overflow-y:auto;padding:1rem;border-radius:15px;background:rgba(0,0,0,.2);backdrop-filter:blur(10px);border:1px solid var(--glass-border)}
+.chat-messages::-webkit-scrollbar{width:6px}.chat-messages::-webkit-scrollbar-track{background:transparent}.chat-messages::-webkit-scrollbar-thumb{background:var(--glass-border);border-radius:3px}
+.message{margin-bottom:1rem;padding:1rem 1.5rem;border-radius:18px;max-width:80%;word-wrap:break-word;animation:messageSlideIn .3s ease;position:relative}
+@keyframes messageSlideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.message.user{background:linear-gradient(135deg,var(--neon-blue) 0%, var(--neon-purple) 100%);margin-left:auto;color:#fff;border-bottom-right-radius:6px}
+.message.bot{background:var(--glass-bg);backdrop-filter:blur(10px);border:1px solid var(--glass-border);border-bottom-left-radius:6px;border-left:3px solid var(--neon-blue)}
+.chat-input-container{display:flex;gap:1rem;align-items:flex-end}
+.chat-input{flex:1;min-height:50px;max-height:120px;resize:vertical;padding:1rem;border:1px solid var(--glass-border);border-radius:15px;background:var(--glass-bg);color:var(--text-primary);backdrop-filter:blur(10px);font-family:inherit;line-height:1.4}
+.quick-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin-bottom:2rem}
+.quick-action{padding:1.5rem;border:1px solid var(--glass-border);border-radius:15px;background:var(--glass-bg);color:var(--text-primary);cursor:pointer;transition:all .3s ease;backdrop-filter:blur(10px);text-align:left}
+.quick-action:hover{background:rgba(0,212,255,.05);border-color:var(--neon-blue);transform:translateY(-2px)}
+.quick-action-icon{font-size:1.5rem;margin-bottom:.5rem}
+.quick-action-title{font-weight:600;margin-bottom:.5rem}
+.quick-action-desc{color:var(--text-secondary);font-size:.9rem}
+.result-card{padding:2rem;margin:1rem 0;border-radius:15px;background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(20px)}
+.result-success{border-left:4px solid var(--success-green);background:rgba(16,185,129,.05)}
+.result-warning{border-left:4px solid var(--warning-orange);background:rgba(245,158,11,.05)}
+.result-error{border-left:4px solid var(--error-red);background:rgba(239,68,68,.05)}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;margin:2rem 0}
+.metric{text-align:center;padding:1.5rem;border-radius:15px;background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(10px)}
+.metric-value{font-size:2rem;font-weight:700;color:var(--neon-blue);margin-bottom:.5rem}
+.metric-label{color:var(--text-secondary);font-size:.9rem}
+.metric-change{font-size:.8rem;margin-top:.25rem}
+.metric-change.positive{color:var(--success-green)}.metric-change.negative{color:var(--error-red)}
+.table-container{overflow-x:auto;border-radius:15px;background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(10px)}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{padding:1rem;text-align:left;border-bottom:1px solid var(--glass-border)}
+.table th{background:rgba(0,0,0,.2);font-weight:600;color:var(--neon-blue)}
+.table tr:hover{background:rgba(255,255,255,.02)}
+.chart-container{position:relative;height:400px;margin:2rem 0;padding:1rem;border-radius:15px;background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(10px)}
+@media (max-width:768px){
+  .container{padding:1rem}.header h1{font-size:2.5rem}.nav{flex-direction:column;align-items:center}
+  .nav-button{width:100%;max-width:300px}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .chat-container{height:400px}.message{max-width:95%}
+  .metrics{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}.quick-actions{grid-template-columns:1fr}
+}
+.text-center{text-align:center}.text-left{text-align:left}.text-right{text-align:right}
+.mb-1{margin-bottom:.5rem}.mb-2{margin-bottom:1rem}.mb-3{margin-bottom:1.5rem}.mb-4{margin-bottom:2rem}
+.mt-1{margin-top:.5rem}.mt-2{margin-top:1rem}.mt-3{margin-top:1.5rem}.mt-4{margin-top:2rem}
+.hidden{display:none}.visible{display:block}
+.success-text{color:var(--success-green)}.warning-text{color:var(--warning-orange)}.error-text{color:var(--error-red)}
+.glow-blue{box-shadow:0 0 20px rgba(0,212,255,.3)}.glow-purple{box-shadow:0 0 20px rgba(124,58,237,.3)}
+#themeToggle{
+  position:fixed;top:1rem;right:1rem;padding:8px 12px;border-radius:10px;border:none;cursor:pointer;
+  background:var(--glass-bg);color:var(--text-primary);font-size:1rem;backdrop-filter:blur(10px);z-index:2000
+}
+</style>
+</head>
+<body>
+<button id="themeToggle">🌙</button>
+
+<div class="header">
+  <h1>AI Personal Debt Finance Advisor</h1>
+  <p>Your Personal Financial Assistant powered by AI</p>
+</div>
+
+<div class="nav-container">
+  <div class="nav">
+    <button class="nav-button active" data-page="setup"    onclick="showPage('setup', this)">Setup Profile</button>
+    <button class="nav-button"         data-page="chat"     onclick="showPage('chat', this)">Chat Advisor</button>
+    <button class="nav-button"         data-page="plans"    onclick="showPage('plans', this)">Repayment Plans</button>
+    <button class="nav-button"         data-page="scenarios"onclick="showPage('scenarios', this)">What-If Scenarios</button>
+    <button class="nav-button"         data-page="education"onclick="showPage('education', this)">Education Hub</button>
+    <button class="nav-button"         data-page="documents"onclick="showPage('documents', this)">Document Analyzer</button>
+    <button class="nav-button"         data-page="credit"   onclick="showPage('credit', this)">Credit Score Tips</button>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Setup Profile Page -->
+  <div id="setup-page" class="page active">
+    <div class="card glass">
+      <div class="card-header text-center">
+        <h2 class="card-title">Setup Your Financial Profile</h2>
+        <p class="card-description">Enter your financial details to get personalized advice</p>
+      </div>
+
+      <div class="result-card">
+        <h3 class="mb-2">Monthly Income & Expenses</h3>
+        <div class="grid grid-3">
+          <div class="form-group">
+            <label>Monthly Income (₹)</label>
+            <input type="number" id="profile-income" class="form-input" value="50000" min="0" placeholder="e.g., 50000"/>
+          </div>
+          <div class="form-group">
+            <label>Monthly Expenses (₹)</label>
+            <input type="number" id="profile-expenses" class="form-input" value="30000" min="0" placeholder="e.g., 30000"/>
+          </div>
+          <div class="form-group">
+            <label>Extra Budget for Debt (₹)</label>
+            <input type="number" id="profile-extra" class="form-input" value="5000" min="0" placeholder="e.g., 5000"/>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+      </div>
+
+      <div class="result-card">
+        <h3 class="mb-2">Your Debts</h3>
+        <p class="mb-3 text-muted">Add all your debts to get comprehensive analysis and recommendations</p>
+        <div id="debts-container"></div>
+        <button class="btn btn-secondary" onclick="addDebt()">Add New Debt</button>
+      </div>
+
+      <div id="status-overview" class="result-card hidden">
+        <h3 class="mb-2">Your Financial Overview</h3>
+        <div id="status-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat Advisor Page -->
+  <div id="chat-page" class="page">
+    <div class="card glass">
+      <div class="card-header">
+        <h2 class="card-title">Chat with AI Financial Advisor</h2>
+        <p class="card-description">Ask questions, get advice, or use slash commands like <code>/plan strategy=avalanche</code></p>
+      </div>
+
+      <div class="quick-actions">
+        <div class="quick-action" onclick="quickChat('What\\'s the best strategy for my debt situation?')">
+          <div class="quick-action-icon">💡</div>
+          <div class="quick-action-title">Get Debt Advice</div>
+          <div class="quick-action-desc">Personalized recommendations</div>
+        </div>
+        <div class="quick-action" onclick="quickChat('/plan strategy=avalanche budget=15000')">
+          <div class="quick-action-icon">📈</div>
+          <div class="quick-action-title">Generate Plan</div>
+          <div class="quick-action-desc">Avalanche repayment strategy</div>
+        </div>
+        <div class="quick-action" onclick="quickChat('/whatif extra=5000 strategy=avalanche')">
+          <div class="quick-action-icon">🧮</div>
+          <div class="quick-action-title">What-If Analysis</div>
+          <div class="quick-action-desc">Extra payment scenarios</div>
+        </div>
+        <div class="quick-action" onclick="quickChat('/rag question=\\"explain debt avalanche vs snowball\\"')">
+          <div class="quick-action-icon">📚</div>
+          <div class="quick-action-title">Learn Concepts</div>
+          <div class="quick-action-desc">Financial education</div>
+        </div>
+      </div>
+
+      <div class="chat-container">
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-container">
+          <textarea id="chat-input" class="chat-input" placeholder="Ask about debt strategies, get financial advice, or use slash commands..." onkeypress="handleChatKeyPress(event)"></textarea>
+          <button class="btn btn-primary" onclick="sendMessage()" id="send-button">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Repayment Plans Page -->
+  <div id="plans-page" class="page">
+    <div class="card glass">
+      <div class="card-header">
+        <h2 class="card-title">Advanced Repayment Planning</h2>
+        <p class="card-description">Create and compare optimized debt repayment strategies</p>
+      </div>
+
+      <div class="grid grid-3 mb-4">
+        <div class="form-group">
+          <label>Monthly Budget (₹)</label>
+          <input type="number" id="plan-budget" class="form-input" value="15000" min="0"/>
+        </div>
+        <div class="form-group">
+          <label>Strategy</label>
+          <select id="plan-strategy" class="form-select">
+            <option value="avalanche">Debt Avalanche (Highest APR First)</option>
+            <option value="snowball">Debt Snowball (Smallest Balance First)</option>
+            <option value="optimal">Mathematical Optimal</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Max Planning Period (months)</label>
+          <input type="number" id="plan-months" class="form-input" value="60" min="12" max="120"/>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="plan-generate-btn" onclick="generatePlan()">Generate Repayment Plan</button>
+
+      <div id="plan-results" class="hidden"></div>
+    </div>
+  </div>
+
+  <!-- What-If Scenarios Page -->
+  <div id="scenarios-page" class="page">
+    <div class="card glass">
+      <div class="card-header">
+        <h2 class="card-title">What-If Scenario Analysis</h2>
+        <p class="card-description">Explore how changes in payments affect your financial timeline</p>
+      </div>
+
+      <div class="grid grid-2 mb-4">
+        <div>
+          <h4 class="mb-2">Base Scenario</h4>
+          <div class="form-group">
+            <label>Monthly Budget (₹)</label>
+            <input type="number" id="scenario-base-budget" class="form-input" value="15000" min="0"/>
+          </div>
+        </div>
+        <div>
+          <h4 class="mb-2">What-If Scenario</h4>
+          <div class="form-group">
+            <label>Extra Monthly Payment (₹)</label>
+            <input type="number" id="scenario-extra" class="form-input" value="3000" min="0"/>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="runWhatIfAnalysis()">Run Analysis</button>
+      <div id="scenario-results" class="hidden"></div>
+    </div>
+  </div>
+
+  <!-- Education Hub Page -->
+  <div id="education-page" class="page">
+    <div class="card glass">
+      <div class="card-header">
+        <h2 class="card-title">Financial Education Hub</h2>
+        <p class="card-description">Learn key financial concepts with AI-powered explanations</p>
+      </div>
+
+      <div class="quick-actions">
+        <div class="quick-action" onclick="askEducation('What is credit utilization and why is 30% the recommended target?')">
+          <div class="quick-action-icon">📊</div>
+          <div class="quick-action-title">Credit Utilization</div>
+          <div class="quick-action-desc">Understanding credit usage</div>
+        </div>
+        <div class="quick-action" onclick="askEducation('Compare debt avalanche and debt snowball strategies')">
+          <div class="quick-action-icon">⚖️</div>
+          <div class="quick-action-title">Avalanche vs Snowball</div>
+          <div class="quick-action-desc">Repayment strategies</div>
+        </div>
+        <div class="quick-action" onclick="askEducation('When should I consider debt consolidation?')">
+          <div class="quick-action-icon">🔗</div>
+          <div class="quick-action-title">Debt Consolidation</div>
+          <div class="quick-action-desc">Pros and cons analysis</div>
+        </div>
+        <div class="quick-action" onclick="askEducation('How to improve credit score effectively?')">
+          <div class="quick-action-icon">🚀</div>
+          <div class="quick-action-title">Credit Score Tips</div>
+          <div class="quick-action-desc">Score improvement guide</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Ask Your Financial Question</label>
+        <div class="chat-input-container">
+          <input type="text" id="education-input" class="form-input" placeholder="e.g., How does compound interest work in debt repayment?" onkeypress="handleEducationKeyPress(event)"/>
+          <button class="btn btn-primary" onclick="askEducation()">Get Answer</button>
+        </div>
+      </div>
+
+      <div id="education-results"></div>
+    </div>
+  </div>
+
+  <!-- Documents Analyzer Page -->
+  <div id="documents-page" class="page">
+    <div class="card glass">
+      <div class="card-header">
+        <h2 class="card-title">Financial Document Analyzer</h2>
+        <p class="card-description">Upload financial documents for AI-powered analysis and insights</p>
+      </div>
+
+      <div class="form-group">
+        <label>Upload Documents</label>
+        <input
+          type="file"
+          id="document-files"
+          class="form-input"
+          multiple
+          accept=".pdf,.txt,.docx"
+          onchange="handleFileUpload()"
+        />
+        <small class="text-muted">Supported formats: PDF, TXT, DOCX</small>
+      </div>
+
+      <div id="file-list" class="hidden mb-3"></div>
+      <button class="btn btn-primary" onclick="analyzeDocuments()" id="analyze-btn" disabled>Analyze Documents</button>
+
+      <div id="document-results"></div>
+    </div>
+  </div>
+
+  <!-- Credit Score Tips Page -->
+  <div id="credit-page" class="page">
+    <div class="card glass">
+      <div class="card-header">
+        <h2 class="card-title">Credit Score Improvement Hub</h2>
+        <p class="card-description">Get personalized recommendations to improve your credit score</p>
+      </div>
+
+      <div class="grid grid-3 mb-4">
+        <div class="form-group">
+          <label>Current Credit Score</label>
+          <input type="number" id="current-score" class="form-input" value="650" min="300" max="850"/>
+        </div>
+        <div class="form-group">
+          <label>Target Credit Score</label>
+          <input type="number" id="target-score" class="form-input" value="750" min="300" max="850"/>
+        </div>
+        <div class="form-group">
+          <label>Current Utilization (%)</label>
+          <input type="number" id="credit-utilization" class="form-input" value="45" min="0" max="100"/>
+        </div>
+      </div>
+
+      <div class="grid grid-2 mb-4">
+        <div class="form-group">
+          <label>Payment History</label>
+          <select id="payment-history" class="form-select">
+            <option value="Always on time">Always on time</option>
+            <option value="1-2 late payments this year">1-2 late payments this year</option>
+            <option value="Several late payments">Several late payments</option>
+            <option value="Missed payments recently">Missed payments recently</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Average Account Age (years)</label>
+          <input type="number" id="account-age" class="form-input" value="3" min="0" max="50" step="0.5"/>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="getCreditImprovementPlan()">Get Improvement Plan</button>
+      <div id="credit-results"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Global State ---------- */
+let currentPage = 'setup';
+let globalDebts = [];
+let globalProfile = { monthly_income: 50000, monthly_expenses: 30000, extra_payment: 5000 };
+
+/* ---------- Theme Toggle ---------- */
+(function initTheme(){
+  const root = document.documentElement;
+  const saved = localStorage.getItem('theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+  document.getElementById('themeToggle').textContent = saved === 'dark' ? '🌙' : '☀️';
+})();
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const root = document.documentElement;
+  const current = root.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  root.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeToggle').textContent = next === 'dark' ? '🌙' : '☀️';
+});
+
+/* ---------- Utils ---------- */
+function formatMoney(amount){ return `₹${Number(amount||0).toLocaleString()}`; }
+function showLoading(id){ const btn = document.getElementById(id); if(!btn) return; btn.disabled=true; btn.classList.add('btn-loading'); }
+function hideLoading(id){ const btn = document.getElementById(id); if(!btn) return; btn.disabled=false; btn.classList.remove('btn-loading'); }
+function showNotification(message, type='success'){
+  const el = document.createElement('div');
+  el.className = `result-card result-${type}`;
+  Object.assign(el.style,{position:'fixed',top:'20px',right:'20px',zIndex:'1000',minWidth:'300px',maxWidth:'400px'});
+  el.innerHTML = message;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 5000);
+}
+
+/* ---------- Navigation ---------- */
+function showPage(pageName, btnEl){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const page = document.getElementById(pageName + '-page');
+  if (page) { page.classList.add('active'); currentPage = pageName; }
+  document.querySelectorAll('.nav-button').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  if (pageName === 'setup') updateStatusOverview();
+}
+
+/* ---------- Profile ---------- */
+function saveProfile(){
+  const income   = parseFloat(document.getElementById('profile-income').value)   || 0;
+  const expenses = parseFloat(document.getElementById('profile-expenses').value) || 0;
+  const extra    = parseFloat(document.getElementById('profile-extra').value)    || 0;
+  if (income <= 0){ showNotification('Please enter a valid monthly income','error'); return; }
+  globalProfile = { monthly_income: income, monthly_expenses: expenses, extra_payment: extra };
+  showNotification('Profile saved successfully!','success');
+  updateStatusOverview();
+}
+
+/* ---------- Debts ---------- */
+function addDebt(){
+  const id = 'debt_' + Date.now();
+  const idx = globalDebts.length + 1;
+  const html = `
+  <div class="debt-item" id="${id}">
+    <div class="debt-item-header">
+      <div class="debt-item-title">Debt #${idx}</div>
+      <button class="debt-remove-btn" onclick="removeDebt('${id}')">Remove</button>
+    </div>
+    <div class="grid grid-2">
+      <div class="form-group">
+        <label>Debt Name</label>
+        <input type="text" class="form-input debt-name" placeholder="e.g., Credit Card A, Car Loan" required>
+      </div>
+      <div class="form-group">
+        <label>Current Balance (₹)</label>
+        <input type="number" class="form-input debt-balance" placeholder="e.g., 50000" min="0" required>
+      </div>
+      <div class="form-group">
+        <label>Annual Interest Rate (%)</label>
+        <input type="number" class="form-input debt-apr" placeholder="e.g., 24" min="0" max="100" step="0.1" required>
+      </div>
+      <div class="form-group">
+        <label>Minimum Monthly Payment (₹)</label>
+        <input type="number" class="form-input debt-min-payment" placeholder="e.g., 2000" min="0" required>
+      </div>
+    </div>
+    <button class="btn btn-secondary mt-2" onclick="saveDebt('${id}')">Save This Debt</button>
+  </div>`;
+  document.getElementById('debts-container').insertAdjacentHTML('beforeend', html);
+}
+function removeDebt(id){
+  const el = document.getElementById(id);
+  if (!el) return;
+  const name = el.querySelector('.debt-name')?.value || '';
+  el.remove();
+  globalDebts = globalDebts.filter(d => d.name !== name);
+  updateStatusOverview();
+  showNotification('Debt removed successfully','success');
+}
+function saveDebt(id){
+  const el = document.getElementById(id); if (!el) return;
+  const name       = (el.querySelector('.debt-name').value || '').trim();
+  const balance    = parseFloat(el.querySelector('.debt-balance').value) || 0;
+  const aprPct     = parseFloat(el.querySelector('.debt-apr').value) || 0;
+  const minPayment = parseFloat(el.querySelector('.debt-min-payment').value) || 0;
+  if (!name)                  return showNotification('Please enter a debt name','error');
+  if (balance <= 0)           return showNotification('Please enter a valid balance','error');
+  if (aprPct <= 0 || aprPct>100) return showNotification('Please enter a valid interest rate (0-100%)','error');
+  if (minPayment <= 0)        return showNotification('Please enter a valid minimum payment','error');
+
+  const data = { name, balance, apr: aprPct/100, min_payment: minPayment };
+  const idx = globalDebts.findIndex(d => d.name === name);
+  if (idx >= 0){ globalDebts[idx] = data; showNotification('Debt updated successfully!','success'); }
+  else { globalDebts.push(data); showNotification('Debt added successfully!','success'); }
+
+  const btn = el.querySelector('.btn-secondary'); if (btn){ btn.textContent='Saved'; btn.disabled=true; }
+  updateStatusOverview();
+}
+function updateStatusOverview(){
+  const wrap = document.getElementById('status-overview');
+  const content = document.getElementById('status-content');
+  if (globalDebts.length === 0){ wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  const totalBalance = globalDebts.reduce((s,d)=>s+d.balance,0);
+  const totalMin     = globalDebts.reduce((s,d)=>s+d.min_payment,0);
+  const weightedAPR  = totalBalance>0 ? globalDebts.reduce((s,d)=>s + d.apr*d.balance,0)/totalBalance : 0;
+  const available    = Math.max(0, globalProfile.monthly_income - globalProfile.monthly_expenses);
+  const leftover     = available - totalMin;
+  content.innerHTML = `
+    <div class="metrics">
+      <div class="metric"><div class="metric-value">${formatMoney(totalBalance)}</div><div class="metric-label">Total Debt</div></div>
+      <div class="metric"><div class="metric-value">${(weightedAPR*100).toFixed(1)}%</div><div class="metric-label">Avg Interest Rate</div></div>
+      <div class="metric"><div class="metric-value">${formatMoney(totalMin)}</div><div class="metric-label">Min Payments</div></div>
+      <div class="metric"><div class="metric-value ${leftover>=0?'success-text':'error-text'}">${formatMoney(leftover)}</div><div class="metric-label">Budget Leftover</div></div>
+    </div>
+    <div class="table-container mt-3">
+      <table class="table">
+        <thead><tr><th>Debt Name</th><th>Balance</th><th>Interest Rate</th><th>Min Payment</th></tr></thead>
+        <tbody>
+          ${globalDebts.map(d=>`
+            <tr><td>${d.name}</td><td>${formatMoney(d.balance)}</td><td>${(d.apr*100).toFixed(1)}%</td><td>${formatMoney(d.min_payment)}</td></tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    ${leftover<0 ? `
+      <div class="result-card result-warning mt-3">
+        <h4>Budget Warning</h4>
+        <p>Your minimum debt payments (${formatMoney(totalMin)}) exceed your available budget (${formatMoney(available)}).</p>
+        <p>Consider increasing income or reducing expenses to create a manageable debt repayment plan.</p>
+      </div>` :
+      `<div class="result-card result-success mt-3">
+        <h4>Budget Status Good</h4>
+        <p>You have ${formatMoney(leftover)} available for extra debt payments each month.</p>
+        <p>Ready to create optimized repayment plans! Visit the <strong>Repayment Plans</strong> section.</p>
+      </div>`
+    }`;
+}
+
+/* ---------- Chat ---------- */
+function addChatMessage(msg, who){
+  const box = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `message ${who}`;
+  const html = msg
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g,'<em>$1</em>')
+    .replace(/\n/g,'<br>');
+  div.innerHTML = html;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+function handleChatKeyPress(e){ if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); } }
+function quickChat(message){ document.getElementById('chat-input').value = message; sendMessage(); }
+async function sendMessage(){
+  const input = document.getElementById('chat-input');
+  const message = input.value.trim();
+  if (!message) return;
+  if (globalDebts.length === 0){ showNotification('Please add your debts in the Setup Profile section first','error'); return; }
+  addChatMessage(message,'user'); input.value='';
+  showLoading('send-button');
+  try{
+    const res = await fetch('/api/chat',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ message, debts: globalDebts, profile: globalProfile })
+    });
+    const json = await res.json();
+    if (res.ok){
+      addChatMessage(json.response,'bot');
+      if (json.type==='plan' && json.data && json.data.schedule){ displayPlanData(json.data); }
+    }else{
+      addChatMessage('Sorry, there was an error processing your request.','bot');
+    }
+  }catch(e){ addChatMessage('Sorry, I couldn\'t process your request. Please try again.','bot'); }
+  finally{ hideLoading('send-button'); }
+}
+function displayPlanData(data){
+  if (!data.schedule || !data.schedule.length) return;
+  const html = `
+    <div class="table-container mt-2" style="max-height:400px;overflow-y:auto;">
+      <table class="table">
+        <thead><tr><th>Month</th><th>Debt</th><th>Payment</th><th>Interest</th><th>Principal</th></tr></thead>
+        <tbody>
+          ${data.schedule.map(r=>`
+            <tr><td>${r.month}</td><td>${r.debt}</td><td>${formatMoney(r.payment)}</td><td>${formatMoney(r.interest)}</td><td>${formatMoney(r.principal)}</td></tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  const box = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'message bot';
+  div.innerHTML = `<strong>Complete Payment Schedule (${data.schedule.length} rows shown):</strong>${html}`;
+  box.appendChild(div); box.scrollTop = box.scrollHeight;
+}
+
+/* ---------- Plans ---------- */
+async function generatePlan(){
+  if (globalDebts.length === 0){ showNotification('Please add your debts first','error'); return; }
+  const budget = parseFloat(document.getElementById('plan-budget').value);
+  const strategy = document.getElementById('plan-strategy').value;
+  const months = parseInt(document.getElementById('plan-months').value);
+  if (budget <= 0) return showNotification('Please enter a valid budget amount','error');
+  const minSum = globalDebts.reduce((s,d)=>s+d.min_payment,0);
+  if (budget < minSum) return showNotification(`Budget (${formatMoney(budget)}) must be at least the total minimum payments (${formatMoney(minSum)})`,'error');
+
+  showLoading('plan-generate-btn');
+  try{
+    const res = await fetch('/api/plans/generate',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ debts: globalDebts, budget, strategy, max_months: months })
+    });
+    const json = await res.json();
+    if (res.ok && json.success){ displayPlanResults(json); document.getElementById('plan-results').classList.remove('hidden'); }
+    else { showNotification(`Error generating plan: ${json.error || json.detail}`,'error'); }
+  }catch(e){ showNotification('Error generating plan. Please try again.','error'); }
+  finally{ hideLoading('plan-generate-btn'); }
+}
+function displayPlanResults(result){
+  const div = document.getElementById('plan-results');
+  div.innerHTML = `
+    <div class="result-card result-success">
+      <h3>${result.strategy} Plan Generated!</h3>
+      <div class="metrics">
+        <div class="metric"><div class="metric-value">${result.formatted.months_to_payoff}</div><div class="metric-label">Time to Debt-Free</div></div>
+        <div class="metric"><div class="metric-value">${result.formatted.total_interest}</div><div class="metric-label">Total Interest</div></div>
+        <div class="metric"><div class="metric-value">${result.formatted.principal_total}</div><div class="metric-label">Principal Paid</div></div>
+        <div class="metric"><div class="metric-value">${result.formatted.efficiency}</div><div class="metric-label">Efficiency</div></div>
+      </div>
+    </div>
+    ${result.schedule?.length ? `
+      <div class="result-card">
+        <h4>Complete Payment Schedule (${result.schedule.length} months)</h4>
+        <div class="table-container" style="max-height:500px;overflow-y:auto;">
+          <table class="table">
+            <thead><tr><th>Month</th><th>Debt</th><th>Payment</th><th>Interest</th><th>Principal</th></tr></thead>
+            <tbody>
+              ${result.schedule.map(r=>`
+                <tr><td>${r.month}</td><td>${r.debt}</td><td>${formatMoney(r.payment)}</td><td>${formatMoney(r.interest)}</td><td>${formatMoney(r.principal)}</td></tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>` : ''
+    }
+    ${result.balance_series?.length ? `
+      <div class="result-card">
+        <h4>Balance Trajectory</h4>
+        <div class="chart-container"><canvas id="balance-chart"></canvas></div>
+      </div>` : ''
+    }`;
+  if (result.balance_series?.length){ setTimeout(()=>createBalanceChart(result.balance_series), 100); }
+}
+function createBalanceChart(data){
+  if (typeof Chart==='undefined') return;
+  const ctx = document.getElementById('balance-chart'); if (!ctx) return;
+  if (window.balanceChart) window.balanceChart.destroy();
+  window.balanceChart = new Chart(ctx,{
+    type:'line',
+    data:{ labels:data.map((_,i)=>`Month ${i}`), datasets:[{ label:'Total Balance', data, borderWidth:3, fill:true, tension:0.4 }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{ color:'#ffffff' } } },
+      scales:{ x:{ ticks:{ color:'#ffffff' }, grid:{ color:'rgba(255,255,255,.1)'} },
+               y:{ ticks:{ color:'#ffffff', callback:(v)=>'₹'+Number(v).toLocaleString() }, grid:{ color:'rgba(255,255,255,.1)'} } }
+    }
+  });
+}
+
+/* ---------- What-if ---------- */
+async function runWhatIfAnalysis(){
+  if (globalDebts.length === 0) return showNotification('Please add your debts first','error');
+  const base = parseFloat(document.getElementById('scenario-base-budget').value);
+  const extra = parseFloat(document.getElementById('scenario-extra').value);
+  if (base <= 0) return showNotification('Please enter a valid base budget amount','error');
+  try{
+    const res = await fetch('/api/scenarios/whatif',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ debts: globalDebts, base_budget: base, scenario_type:'extra_payment', scenario_params:{ extra_monthly: extra }, max_months:60 })
+    });
+    const json = await res.json();
+    if (res.ok && json.success){ displayScenarioResults(json); document.getElementById('scenario-results').classList.remove('hidden'); }
+    else { showNotification(`Error running analysis: ${json.error || json.detail}`,'error'); }
+  }catch(e){ showNotification('Error running analysis. Please try again.','error'); }
+}
+function displayScenarioResults(r){
+  const div = document.getElementById('scenario-results');
+  div.innerHTML = `
+    <div class="result-card result-success">
+      <h3>What-If Analysis Results</h3>
+      <div class="grid grid-2">
+        <div><h4>Base Scenario</h4><p><strong>Duration:</strong> ${r.base.months} months</p><p><strong>Total Interest:</strong> ${formatMoney(r.base.total_interest)}</p></div>
+        <div><h4>With Extra Payment</h4><p><strong>Duration:</strong> ${r.scenario.months} months</p><p><strong>Total Interest:</strong> ${formatMoney(r.scenario.total_interest)}</p></div>
+      </div>
+      <div class="metrics mt-3">
+        <div class="metric"><div class="metric-value success-text">${r.formatted.months_saved}</div><div class="metric-label">Months Saved</div></div>
+        <div class="metric"><div class="metric-value success-text">${r.formatted.interest_saved}</div><div class="metric-label">Interest Saved</div></div>
+        <div class="metric"><div class="metric-value">${(r.savings.months_saved/12).toFixed(1)} years</div><div class="metric-label">Time Reduction</div></div>
+      </div>
+    </div>`;
+}
+
+/* ---------- Education ---------- */
+function handleEducationKeyPress(e){ if (e.key==='Enter'){ askEducation(); } }
+async function askEducation(q){
+  const input = document.getElementById('education-input');
+  const question = q || input.value.trim();
+  if (!question) return showNotification('Please enter a question','error');
+  if (!q) input.value = '';
+  try{
+    const res = await fetch('/api/education/ask',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ question }) });
+    const json = await res.json();
+    if (res.ok && json.success) displayEducationResults(json);
+    else showNotification(`Error getting answer: ${json.detail || 'Unknown error'}`,'error');
+  }catch(e){ showNotification('Error getting answer. Please try again.','error'); }
+}
+function displayEducationResults(r){
+  const div = document.getElementById('education-results');
+  div.innerHTML = `
+    <div class="result-card">
+      <h4>${r.question}</h4>
+      <div class="mt-2 mb-3" style="white-space:pre-wrap;line-height:1.6;">${r.answer}</div>
+      ${r.sources?.length ? `<div class="mt-3 pt-3" style="border-top:1px solid var(--glass-border);"><strong>Sources:</strong> ${r.sources.join(', ')}</div>` : ''}
+    </div>`;
+}
+
+/* ---------- Documents ---------- */
+function handleFileUpload(){
+  const input = document.getElementById('document-files');
+  const files = input.files;
+  const btn = document.getElementById('analyze-btn');
+  const list = document.getElementById('file-list');
+  if (files.length){
+    btn.disabled = false; list.classList.remove('hidden');
+    const inner = Array.from(files).map(f=>`<div class="mb-1">${f.name} (${(f.size/1024).toFixed(1)} KB)</div>`).join('');
+    list.innerHTML = `<div class="result-card"><h4>Selected Files:</h4>${inner}</div>`;
+  }else{
+    btn.disabled = true; list.classList.add('hidden');
+  }
+}
+async function analyzeDocuments(){
+  const input = document.getElementById('document-files');
+  const files = input.files;
+  if (!files.length) return showNotification('Please select files to analyze','error');
+  const fd = new FormData();
+  Array.from(files).forEach(f => fd.append('files', f));
+  showLoading('analyze-btn');
+  try{
+    const res = await fetch('/api/documents/analyze',{ method:'POST', body: fd });
+    const json = await res.json();
+    if (res.ok && json.success) displayDocumentResults(json);
+    else showNotification(`Error analyzing documents: ${json.error || json.detail}`,'error');
+  }catch(e){ showNotification('Error analyzing documents. Please try again.','error'); }
+  finally{ hideLoading('analyze-btn'); }
+}
+function displayDocumentResults(r){
+  const div = document.getElementById('document-results');
+  div.innerHTML = `
+    <div class="result-card result-success">
+      <h3>Document Analysis Results</h3>
+      <p><strong>Files Processed:</strong> ${r.files_processed}</p>
+      <p><strong>Files:</strong> ${r.file_names.join(', ')}</p>
+    </div>
+    <div class="result-card">
+      <h4>Summary</h4>
+      <div style="white-space:pre-wrap;line-height:1.6;">${r.summary}</div>
+    </div>`;
+}
+
+/* ---------- Credit Score ---------- */
+async function getCreditImprovementPlan(){
+  const currentScore  = parseInt(document.getElementById('current-score').value);
+  const targetScore   = parseInt(document.getElementById('target-score').value);
+  const utilization   = parseFloat(document.getElementById('credit-utilization').value);
+  const paymentHist   = document.getElementById('payment-history').value;
+  const accountAge    = parseFloat(document.getElementById('account-age').value);
+
+  if (currentScore < 300 || currentScore > 850) return showNotification('Please enter a valid current credit score (300-850)','error');
+  if (targetScore  < 300 || targetScore  > 850) return showNotification('Please enter a valid target credit score (300-850)','error');
+  if (targetScore <= currentScore) return showNotification('Target score should be higher than current score','error');
+
+  // naive guess of account types based on names
+  const accountTypes = Array.from(new Set(globalDebts.map(d => d.name.toLowerCase().includes('card') ? 'revolving' : 'installment')));
+  const payload = {
+    current_score: currentScore,
+    target_score : targetScore,
+    payment_history: paymentHist,
+    credit_utilization: utilization,
+    credit_age: accountAge,
+    new_accounts: 0,
+    account_types: accountTypes.length ? accountTypes : ['revolving','installment'],
+    debts: globalDebts
+  };
+
+  try{
+    const res = await fetch('/api/credit/assess',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const json = await res.json();
+    if (res.ok && json.success) displayCreditResults(json);
+    else showNotification(`Error: ${json.detail || 'Unable to assess credit plan'}`,'error');
+  }catch(e){ showNotification('Error getting plan. Please try again.','error'); }
+}
+function displayCreditResults(r){
+  const div = document.getElementById('credit-results');
+  div.innerHTML = `
+    <div class="result-card result-success">
+      <h3>Personalized Credit Improvement Plan</h3>
+      <div class="metrics">
+        <div class="metric"><div class="metric-value">${r.current_score}</div><div class="metric-label">Current Score</div></div>
+        <div class="metric"><div class="metric-value">${r.predicted_score}</div><div class="metric-label">Projected Score</div></div>
+        <div class="metric"><div class="metric-value">${(r.improvement_potential || 0).toFixed(0)} pts</div><div class="metric-label">Potential Gain</div></div>
+        <div class="metric"><div class="metric-value">${r.timeline}</div><div class="metric-label">Estimated Timeline</div></div>
+      </div>
+      <div class="mt-2" style="white-space:pre-wrap;line-height:1.6;">${r.analysis || 'Actionable guidance will appear here.'}</div>
+    </div>`;
+}
+
+/* ---------- Init ---------- */
+window.addEventListener('load', () => {
+  // start with one empty debt row for convenience
+  addDebt();
+  updateStatusOverview();
+});
+</script>
+</body>
+</html>
