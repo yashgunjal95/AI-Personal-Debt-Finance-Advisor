@@ -48,6 +48,7 @@ DEBUG_MODE=false
 bashstreamlit run app.py
 The application will open in your browser at http://localhost:8501
 📁 Project Structure
+
 ai-debt-finance-advisor/
 ├── app.py                 # Main Streamlit application
 ├── requirements.txt       # Python dependencies
@@ -79,6 +80,7 @@ ai-debt-finance-advisor/
     ├── test_optimization.py
     ├── test_scenarios.py
     └── test_utils.py
+
 💡 Usage Examples
 Basic Debt Entry
 
